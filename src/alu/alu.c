@@ -219,7 +219,17 @@ void op_sub(char rega[], char regb[], char accumulator[], char flags[]){
   SBC
   laubr: muss man nicht machen
 */
-void op_alu_sbc(char regina[], char reginb[], char regouta[], char flags[]){
+void op_alu_sbc(char rega[], char regb[], char accumulator[], char flags[]){
+  int i;
+
+  two_complement(regb);
+
+  for(i=REG_WIDTH-1; i >= 0; i--){
+    full_adder(rega[i], regb[i], m[c]);
+    accumulator[i] = m[s];
+  }
+
+  set_flags(rega, regb, accumulator, flags);
 
 }
 
