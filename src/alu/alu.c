@@ -52,10 +52,18 @@ int zero_test(char accumulator[]){
   den Mue-memory das summen-bit und das carry-bit.
 */
 void half_adder(char p, char q){
-  /* if(p=='0' && q=='0'){ */
-  /*   c */
-  /* } */
-  /* if(p=='1' && q=='1'){} */
+  if(p=='0' && q=='0'){
+    m[c] = '0';
+    m[s] = '0';
+  }
+  else if(p=='1' && q=='1'){
+    m[c] = '1';
+    m[s] = '0';
+  }
+  else {
+    m[c] = '0';
+    m[s] = '1';
+  }
 }
 
 /*
@@ -79,8 +87,8 @@ void full_adder(char pbit, char qbit, char cbit){
 void one_complement(char reg[]){
   int i;
 
-  for(i=0; reg[i] != '\0';i++){
-    reg[i] = (reg[i]=='0')?'1':'0';
+  for(i=0; reg[i] != 0; i++){
+    reg[i] = (reg[i]=='0') ? '1' : '0';
   }
 }
 
@@ -89,8 +97,15 @@ void one_complement(char reg[]){
   reg := K2(reg)
 */
 void two_complement(char reg[]){
-  //TODO
+  int i = REG_WIDTH-1;
+
   one_complement(reg);
+
+  while(reg[i] != '0' && i >=0){
+    reg[i] = '0';
+    i--;
+  }
+  reg[i] = '1';
 }
 
 
@@ -102,6 +117,47 @@ void two_complement(char reg[]){
   accumulator := rega + regb
 */
 void op_add(char rega[], char regb[], char accumulator[], char flags[]){
+  int i;
+  m[c] = '0';
+
+  for(i=REG_WIDTH-1; i >= 0; i--){
+    full_adder(rega[i], regb[i], m[c]);
+    accumulator[i] = m[s];
+  }
+
+  // carry-flag
+  if(m[c] == '1'){
+    setCarryflag(flags);
+  }
+  else {
+    clearCarryflag(flags);
+  }
+
+  //overflow-flag
+  if((rega[0] == '0' && regb[0] == '0' && accumulator[0] == '1') ||
+     (rega[0] == '1' && regb[0] == '1' && accumulator[0] == '0')) {
+
+    setOverflowflag(flags);
+  }
+  else {
+    clearOverflowflag(flags);
+  }
+
+  //zero-flag
+  if(zero_test(accumulator) == 1){
+    setZeroflag(flags);
+  }
+  else {
+    clearZeroflag(flags);
+  }
+
+  //signed-flag
+  if(accumulator[0] == '1'){
+    setSignflag(flags);
+  }
+  else {
+    clearSignflag(flags);
+  }
 
 }
 
