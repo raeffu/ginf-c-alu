@@ -1,19 +1,19 @@
 /*
-   alu.c
-   - 21.11.05/BHO1
-   bho1 29.12.2006
-   bho1 6.12.2007
-   bho1 30.11.2007 - clean up
-   bho1 24.11.2009 - assembler instruction
-   bho1 3.12.2009 - replaced adder with full_adder
-   bho1 20.7.2011 - rewrite: minimize global vars, ALU-operations are modeled with fct taking in/out register as parameter
-   bho1 6.11.2011 - rewrite flags: adding flags as functional parameter. Now alu is truly a function
-   bho1 26.11.2012 - remove bit declaration from op_alu_asl and op_alu_ror as they are unused (this may change later)
+  alu.c
+  - 21.11.05/BHO1
+  bho1 29.12.2006
+  bho1 6.12.2007
+  bho1 30.11.2007 - clean up
+  bho1 24.11.2009 - assembler instruction
+  bho1 3.12.2009 - replaced adder with full_adder
+  bho1 20.7.2011 - rewrite: minimize global vars, ALU-operations are modeled with fct taking in/out register as parameter
+  bho1 6.11.2011 - rewrite flags: adding flags as functional parameter. Now alu is truly a function
+  bho1 26.11.2012 - remove bit declaration from op_alu_asl and op_alu_ror as they are unused (this may change later)
 
 
-   GPL applies
+  GPL applies
 
-   -->> YOUR FULL NAME HERE  <<--
+  -->> YOUR FULL NAME HERE  <<--
 */
 
 #include <stdio.h>
@@ -41,8 +41,8 @@ unsigned int c_in = 2;	/* carry in bit address */
 int zero_test(char accumulator[]){
   int i;
   for(i=0;accumulator[i]!='\0'; i++){
-	if(accumulator[i]!='0')
-	  return 0;
+    if(accumulator[i]!='0')
+      return 0;
   }
   return 1;
 }
@@ -67,10 +67,10 @@ void half_adder(char p, char q){
 }
 
 /*
-   void adder(char pbit, char qbit, char cbit)
-   Adder oder auch Fulladder:
-   Nimmt zwei character bits und ein carry-character-bit
-   und schreibt das Resultat (summe, carry) in den Mue-speicher
+  void adder(char pbit, char qbit, char cbit)
+  Adder oder auch Fulladder:
+  Nimmt zwei character bits und ein carry-character-bit
+  und schreibt das Resultat (summe, carry) in den Mue-speicher
 */
 void full_adder(char pbit, char qbit, char cbit){
   half_adder(pbit, qbit);
@@ -97,34 +97,22 @@ void one_complement(char reg[]){
   reg := K2(reg)
 */
 void two_complement(char reg[]){
-  int i = REG_WIDTH-1;
+  int i;
 
   one_complement(reg);
 
-  while(reg[i] != '0' && i >=0){
-    reg[i] = '0';
-    i--;
+  for(i=REG_WIDTH-1; i >= 0; i--){
+    if(reg[i] == '1'){
+      reg[i] = '0';
+    }
+    else if(reg[i] == '0'){
+      reg[i] = '1';
+      break;
+    }
   }
-  reg[i] = '1';
 }
 
-
-/*
-  Die Werte in Register rega und Register regb werden addiert, das
-  Resultat wird in Register accumulator geschrieben. Die Flags cflag,
-  oflag, zflag und sflag werden entsprechend gesetzt
-
-  accumulator := rega + regb
-*/
-void op_add(char rega[], char regb[], char accumulator[], char flags[]){
-  int i;
-  m[c] = '0';
-
-  for(i=REG_WIDTH-1; i >= 0; i--){
-    full_adder(rega[i], regb[i], m[c]);
-    accumulator[i] = m[s];
-  }
-
+void set_flags(char rega[], char regb[], char accumulator[], char flags[]){
   // carry-flag
   if(m[c] == '1'){
     setCarryflag(flags);
@@ -162,6 +150,25 @@ void op_add(char rega[], char regb[], char accumulator[], char flags[]){
 }
 
 /*
+  Die Werte in Register rega und Register regb werden addiert, das
+  Resultat wird in Register accumulator geschrieben. Die Flags cflag,
+  oflag, zflag und sflag werden entsprechend gesetzt
+
+  accumulator := rega + regb
+*/
+void op_add(char rega[], char regb[], char accumulator[], char flags[]){
+  int i;
+  m[c] = '0';
+
+  for(i=REG_WIDTH-1; i >= 0; i--){
+    full_adder(rega[i], regb[i], m[c]);
+    accumulator[i] = m[s];
+  }
+
+  set_flags(rega, regb, accumulator, flags);
+}
+
+/*
 
   ALU_OP_ADD_WITH_CARRY
 
@@ -174,6 +181,14 @@ void op_add(char rega[], char regb[], char accumulator[], char flags[]){
 
 */
 void op_adc(char rega[], char regb[], char accumulator[], char flags[]){
+  int i;
+
+  for(i=REG_WIDTH-1; i >= 0; i--){
+    full_adder(rega[i], regb[i], m[c]);
+    accumulator[i] = m[s];
+  }
+
+  set_flags(rega, regb, accumulator, flags);
 
 }
 
@@ -185,12 +200,24 @@ void op_adc(char rega[], char regb[], char accumulator[], char flags[]){
   accumulator := rega - regb
 */
 void op_sub(char rega[], char regb[], char accumulator[], char flags[]){
+  int i;
+  m[c] = '0';
+
+  two_complement(regb);
+
+  for(i=REG_WIDTH-1; i >= 0; i--){
+    full_adder(rega[i], regb[i], m[c]);
+    accumulator[i] = m[s];
+  }
+
+  set_flags(rega, regb, accumulator, flags);
 
 }
 
 /*
   subtract with carry
   SBC
+  laubr: muss man nicht machen
 */
 void op_alu_sbc(char regina[], char reginb[], char regouta[], char flags[]){
 
@@ -205,7 +232,13 @@ void op_alu_sbc(char regina[], char reginb[], char regouta[], char flags[]){
   accumulator := rega AND regb
 */
 void op_and(char rega[], char regb[], char accumulator[], char flags[]){
+  int i;
 
+  for(i=REG_WIDTH-1; i >= 0; i--){
+    accumulator[i] = (rega[i] == '1' && regb[i] == '1') ? '1' : '0';
+  }
+
+  set_flags(rega, regb, accumulator, flags);
 }
 /*
   Die Werte in Register rega und Register regb werden logisch geORt, das
@@ -215,6 +248,13 @@ void op_and(char rega[], char regb[], char accumulator[], char flags[]){
   accumulator := rega OR regb
 */
 void op_or(char rega[], char regb[], char accumulator[], char flags[]){
+  int i;
+
+  for(i=REG_WIDTH-1; i >= 0; i--){
+    accumulator[i] = (rega[i] == '0' && regb[i] == '0') ? '0' : '1';
+  }
+
+  set_flags(rega, regb, accumulator, flags);
 
 }
 /*
@@ -225,6 +265,13 @@ void op_or(char rega[], char regb[], char accumulator[], char flags[]){
   accumulator := rega XOR regb
 */
 void op_xor(char rega[], char regb[], char accumulator[], char flags[]){
+  int i;
+
+  for(i=REG_WIDTH-1; i >= 0; i--){
+    accumulator[i] = (rega[i] != regb[i]) ? '1' : '0';
+  }
+
+  set_flags(rega, regb, accumulator, flags);
 
 }
 
@@ -235,11 +282,15 @@ void op_xor(char rega[], char regb[], char accumulator[], char flags[]){
 */
 void op_not_a(char rega[], char regb[], char accumulator[], char flags[]){
 
+  one_complement(rega);
+
 }
 
 
 /* Einer Komplement von Register regb */
 void op_not_b(char rega[], char regb[], char accumulator[], char flags[]){
+
+  one_complement(regb);
 
 }
 
@@ -319,8 +370,8 @@ void alu(unsigned int alu_opcode, char reg_in_a[], char reg_in_b[], char reg_out
     op_add(reg_in_a, reg_in_b, reg_out_accu, (flags==NULL)?dummyflags:flags);
     break;
   case ALU_OP_ADD_WITH_CARRY :
-	op_adc(reg_in_a, reg_in_b, reg_out_accu, (flags==NULL)?dummyflags:flags);
-	break;
+    op_adc(reg_in_a, reg_in_b, reg_out_accu, (flags==NULL)?dummyflags:flags);
+    break;
   case ALU_OP_SUB :
     op_sub(reg_in_a, reg_in_b, reg_out_accu, (flags==NULL)?dummyflags:flags);
     break;
@@ -361,8 +412,8 @@ void alu(unsigned int alu_opcode, char reg_in_a[], char reg_in_b[], char reg_out
     op_alu_ror(reg_in_a, reg_in_b, reg_out_accu, (flags==NULL)?dummyflags:flags);
     break;
   case ALU_OP_RESET :
-	alu_reset();
-	break;
+    alu_reset();
+    break;
   default:
     printf("ALU(%i): Invalide operation %i selected", alu_opcode, alu_opcode);
   }
