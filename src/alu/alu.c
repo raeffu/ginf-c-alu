@@ -13,7 +13,7 @@
 
   GPL applies
 
-  -->> YOUR FULL NAME HERE  <<--
+  -->> Raphael Laubscher  <<--
 */
 
 #include <stdio.h>
